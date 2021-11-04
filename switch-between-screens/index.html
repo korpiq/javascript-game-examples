@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="style.css" rel="stylesheet" />
+        <script src="script.js"></script>
+    </head>
+    <body onload="start_game()">
+
+        <div class="screen" id="first_screen">
+
+            <div class="text">
+                <h1>This is the first screen.</h1>
+                <p>Here we demonstrate how to make a game that consists of many screens.</å>
+                <p>Screens are hidden by default by having style class "screen" that is defined as "display: none" in style.css.</p>
+                <p>One screen at a time is revealed and the previous one hidden.</p>
+                <p>Each screen has its own background defined in style.css.</p>
+                <div class="door" onclick="switch_to_screen('second_screen')">Door to second screen</div>
+            </div>
+
+        </div><!-- end of first_screen -->
+
+        <div class="screen" id="second_screen">
+
+            <div class="text">
+                <h1>This is the second screen.</h1>
+                <div class="door" onclick="switch_to_screen('first_screen')">Door to first screen</div>
+            </div>
+
+        </div><!-- end of second_screen -->
+
+    </body>
+</html>
