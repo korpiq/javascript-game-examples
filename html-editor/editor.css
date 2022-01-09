@@ -11,3 +11,10 @@
     color: white;
     border-radius: 8px;
 }
+
+.area-marker {
+    position: absolute;
+    min-width: 20px;
+    min-height: 20px;
+    border: 2px solid black;
+}

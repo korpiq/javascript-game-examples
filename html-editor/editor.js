@@ -2,6 +2,11 @@ function PageEditor() {
 
     var pageEditDialog = createPageEditDialog()
     var isMouseOnEditDialog = false
+    var contextMenuAt = {
+        target: document.body,
+        x: 0,
+        y: 0,
+    }
     var beforeContextMenu = {
         onkeydown: window.onkeydown,
         onmousedown: window.onmousedown
@@ -41,6 +46,10 @@ function PageEditor() {
         window.onkeydown = hidePageEditDialogByEvent
         window.onmousedown = hidePageEditDialogByEvent
 
+        contextMenuAt.target = event.target
+        contextMenuAt.x = event.clientX
+        contextMenuAt.y = event.clientY
+
         return false
     }
 
@@ -77,8 +86,14 @@ function PageEditor() {
             },
             [
                 createElement('div', null, ['Page editor']),
-                createButton('Add div', (event) => { hidePageEditDialog(); console.log('add div') }),
-                createButton('Save', (event) => { hidePageEditDialog(); savePage() }),
+                createButton('Add div', (event) => {
+                    hidePageEditDialog()
+                    addDiv(contextMenuAt.target, contextMenuAt.x, contextMenuAt.y)
+                }),
+                createButton('Save', () => {
+                    hidePageEditDialog()
+                    savePage()
+                }),
             ],
         )
     }
@@ -98,6 +113,16 @@ function PageEditor() {
 
     function createButton(innerText, onclick) {
         return createElement('button', { innerText, onclick })
+    }
+
+    function addDiv(parent, x, y) {
+        const div = createElement('div', {
+            className: 'area-marker',
+        })
+        div.style.left = x + 'px'
+        div.style.top = y + 'px'
+
+        parent.appendChild(div)
     }
 
     return { editPage, savePage }
