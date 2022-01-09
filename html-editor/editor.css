@@ -1,0 +1,13 @@
+#editor-dialog {
+    position: absolute;
+    border-radius: 4px;
+    padding: 4px;
+    background-color: lightgray;
+    align-items: center;
+}
+
+#editor-dialog button {
+    background-color: rgb(0, 128, 160);
+    color: white;
+    border-radius: 8px;
+}
