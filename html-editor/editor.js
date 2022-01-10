@@ -2,6 +2,7 @@ function PageEditor() {
 
     var pageEditDialog = createPageEditDialog()
     var selectedElement = document.body
+    var dragger = undefined
     var gridSize = {
         x: 16,
         y: 16,
@@ -41,7 +42,6 @@ function PageEditor() {
     }
 
     function showPageEditDialog(event) {
-        console.log('showing page editing dialog', event)
         pageEditDialog.style.top = event.clientY + 'px'
         pageEditDialog.style.left = event.clientX + 'px'
         document.body.appendChild(pageEditDialog)
@@ -52,7 +52,7 @@ function PageEditor() {
 
         contextMenuAt.x = event.clientX
         contextMenuAt.y = event.clientY
-        selectedElement = document.body.contains(event.target) ? event.target : document.body
+        selectElement(event.target)
         const showAreaOptions = selectedElement !== document.body
         const areaOptionsDialog = document.getElementById('page-editor-dialog-options-for-area')
         areaOptionsDialog.style.display = showAreaOptions ? 'inherit' : 'none'
@@ -61,7 +61,6 @@ function PageEditor() {
     }
 
     function hidePageEditDialog() {
-        console.log('hiding page editing dialog', event)
         if (document.body.contains(pageEditDialog)) {
             document.body.removeChild(pageEditDialog)
             window.onmousedown = beforeContextMenu.onmousedown
@@ -71,7 +70,6 @@ function PageEditor() {
 
     function hidePageEditDialogByEvent(event) {
         if (event.key || !isMouseOnEditDialog) {
-            console.log('hiding page editing dialog', event)
             if (document.body.contains(pageEditDialog)) {
                 document.body.removeChild(pageEditDialog)
                 window.onmousedown = beforeContextMenu.onmousedown
@@ -111,7 +109,7 @@ function PageEditor() {
     function createElement(tagName, attributes, children) {
         const element = document.createElement(tagName)
         if (attributes) {
-            deepMergeObjects(attributes, element)
+            deepMergeToObject(attributes, element)
         }
         if (children) {
             element.append(...children)
@@ -119,11 +117,11 @@ function PageEditor() {
         return element
     }
 
-    function deepMergeObjects(source, target) {
+    function deepMergeToObject(source, target) {
         for (key in source) {
             const value = source[key]
-            if (typeof (value) === 'object') {
-                deepMergeObjects(value, target[key])
+            if (value instanceof Object && !(Array.isArray(value) || (value instanceof Function))) {
+                deepMergeToObject(value, target[key])
             } else {
                 target[key] = value
             }
@@ -134,15 +132,21 @@ function PageEditor() {
         return createElement('div', {}, [createElement('button', { innerText, onclick })])
     }
 
-    function addDiv(parent, x, y) {
-        var offsetParent = parent
-        while (offsetParent) {
-            x -= offsetParent.offsetLeft
-            y -= offsetParent.offsetTop
-            offsetParent = offsetParent.offsetParent
+    function relateCoordinatesToElement(coordinates, element) {
+        while (element) {
+            coordinates = {
+                x: coordinates.x - element.offsetLeft,
+                y: coordinates.y - element.offsetTop
+            }
+            element = element.offsetParent
         }
-        x = Math.floor(x / gridSize.x) * gridSize.x
-        y = Math.floor(y / gridSize.y) * gridSize.y
+        return coordinates
+    }
+
+    function addDiv(parent, x, y) {
+        const coordinates = relateCoordinatesToElement({ x, y }, parent)
+        x = Math.floor(coordinates.x / gridSize.x) * gridSize.x
+        y = Math.floor(coordinates.y / gridSize.y) * gridSize.y
 
         if (x < 0 || x > (parent.offsetWidth || Infinity) || y < 0 || y > (parent.offsetHeight || Infinity)) {
             console.log('Outside parent area!')
@@ -156,7 +160,108 @@ function PageEditor() {
         div.style.minHeight = gridSize.y + 'px'
 
         parent.appendChild(div)
-        selectedElement = div
+        selectElement(div)
+    }
+
+    function selectElement(it) {
+        if (dragger) {
+            dragger.end()
+        }
+        if (document.body.contains(it)) {
+            selectedElement = it
+            dragger = Draggable(it)
+        } else {
+            selectedElement = document.body
+            dragger = undefined
+        }
+    }
+
+    function Draggable(it) {
+        const original = {
+            onmousedown: it.onmousedown,
+        }
+        const originalWindow = {
+            onmousemove: window.onmousemove,
+            onmouseup: window.onmouseup,
+        }
+        var mouseFrom = { x: 0, y: 0 }
+        var boxFrom = { x: 0, y: 0 }
+
+        function move(event) {
+            const dx = event.clientX - mouseFrom.x
+            const dy = event.clientY - mouseFrom.y
+
+            it.style.left = (boxFrom.x + dx) + 'px'
+            it.style.top = (boxFrom.y + dy) + 'px'
+
+            event.stopPropagation()
+            return false
+        }
+
+        function resize(event) {
+            const dx = event.clientX - mouseFrom.x
+            const dy = event.clientY - mouseFrom.y
+
+            it.style.width = (boxFrom.x + dx) + 'px'
+            it.style.height = (boxFrom.y + dy) + 'px'
+
+            event.stopPropagation()
+            return false
+        }
+
+        function mouseDown(event) {
+            mouseFrom = { x: event.clientX, y: event.clientY }
+            const relativeMouse = relateCoordinatesToElement(mouseFrom, it.offsetParent)
+            const distanceFromRightEdge = it.offsetLeft + it.offsetWidth - relativeMouse.x
+            const distanceFromBottomEdge = it.offsetTop + it.offsetHeight - relativeMouse.y
+            const closeToBottomRightCorner = distanceFromRightEdge < 6 && distanceFromBottomEdge < 6
+
+            if (closeToBottomRightCorner) {
+                boxFrom.x = it.offsetWidth
+                boxFrom.y = it.offsetHeight
+                window.onmousemove = resize
+            } else {
+                boxFrom.x = it.offsetLeft
+                boxFrom.y = it.offsetTop
+                window.onmousemove = move
+            }
+
+            window.onmouseup = mouseUp
+
+            event.stopPropagation()
+            return false
+        }
+
+        function mouseUp(event) {
+            const action = window.onmousemove
+            deepMergeToObject(originalWindow, window)
+
+            const dx = event.clientX - mouseFrom.x
+            const dy = event.clientY - mouseFrom.y
+            if (action === move) {
+                const x = Math.round((boxFrom.x + dx) / gridSize.x) * gridSize.x
+                const y = Math.round((boxFrom.y + dy) / gridSize.y) * gridSize.y
+                it.style.left = x + 'px'
+                it.style.top = y + 'px'
+            } else if (action === resize) {
+                const x = Math.ceil((boxFrom.x + dx) / gridSize.x) * gridSize.x
+                const y = Math.ceil((boxFrom.y + dy) / gridSize.y) * gridSize.y
+                it.style.width = x + 'px'
+                it.style.height = y + 'px'
+            }
+
+            event.stopPropagation()
+            return false
+        }
+
+        function end() {
+            deepMergeToObject(original, it)
+            deepMergeToObject(originalWindow, window)
+        }
+
+        it.onmousedown = mouseDown
+
+        return { end }
     }
 
     return { editPage, savePage }
