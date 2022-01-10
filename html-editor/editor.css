@@ -1,4 +1,4 @@
-#editor-dialog {
+#page-editor-dialog {
     position: absolute;
     border-radius: 4px;
     padding: 4px;
@@ -6,15 +6,17 @@
     align-items: center;
 }
 
-#editor-dialog button {
+#page-editor-dialog button {
     background-color: rgb(0, 128, 160);
     color: white;
     border-radius: 8px;
 }
 
-.area-marker {
+.area {
     position: absolute;
-    min-width: 20px;
-    min-height: 20px;
-    border: 2px solid black;
+    border: 1px solid black;
+}
+
+.area:hover {
+    border: 1px solid red;
 }
