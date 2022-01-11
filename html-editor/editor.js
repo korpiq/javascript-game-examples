@@ -1,7 +1,18 @@
 function PageEditor() {
+    const styleClasses = {
+        'div': 'position: absolute; box-shadow: 0 0 2px rgba(96,96,96,0.5)',
+        '#page-editor-dialog': 'background-color: lightgray',
+        '#page-editor-dialog *': 'position: initial',
+    }
+    const boxShadows = {
+        'selected': '0 0 2px rgba(255,0,0,0.5)',
+        'parent': '0 0 2px rgba(255,0,0,0.3)',
+    }
 
+    var classInput = createElement('input', { onchange: onDialogClassNameChange })
     var pageEditDialog = createPageEditDialog()
-    var selectedElement = document.body
+    var selectedElement = null
+    var originalOfSelected = {}
     var dragger = undefined
     var gridSize = {
         x: 16,
@@ -19,7 +30,14 @@ function PageEditor() {
 
     function editPage() {
         window.oncontextmenu = showPageEditDialog
+        document.head.append(createEditorStyles())
         console.log('Page editor activated')
+    }
+
+    function createEditorStyles() {
+        const style = document.createElement('style')
+        style.innerHTML = Object.keys(styleClasses).map((k) => `${k} { ${styleClasses[k]} }`).join('\n')
+        return style
     }
 
     function savePage(filename) {
@@ -53,9 +71,8 @@ function PageEditor() {
         contextMenuAt.x = event.clientX
         contextMenuAt.y = event.clientY
         selectElement(event.target)
-        const showAreaOptions = selectedElement !== document.body
         const areaOptionsDialog = document.getElementById('page-editor-dialog-options-for-area')
-        areaOptionsDialog.style.display = showAreaOptions ? 'inherit' : 'none'
+        areaOptionsDialog.style.display = selectedElement ? 'inherit' : 'none'
 
         return false
     }
@@ -69,7 +86,7 @@ function PageEditor() {
     }
 
     function hidePageEditDialogByEvent(event) {
-        if (event.key || !isMouseOnEditDialog) {
+        if (event.key === 'Escape' || !isMouseOnEditDialog) {
             if (document.body.contains(pageEditDialog)) {
                 document.body.removeChild(pageEditDialog)
                 window.onmousedown = beforeContextMenu.onmousedown
@@ -81,6 +98,12 @@ function PageEditor() {
         }
     }
 
+    function onDialogClassNameChange(event) {
+        if (selectedElement) {
+            selectedElement.className = classInput.value
+        }
+    }
+
     function createPageEditDialog() {
         function afterHidingDialog(f, args) {
             return () => {
@@ -88,6 +111,7 @@ function PageEditor() {
                 f(...(args || []))
             }
         }
+
         return createElement(
             'div',
             {
@@ -97,10 +121,11 @@ function PageEditor() {
             },
             [
                 createElement('div', { id: 'page-editor-dialog-options-for-area', style: { display: 'none' } }, [
+                    createElement('div', {}, ['Class: ', classInput]),
                     createButton('Delete area', afterHidingDialog(() => selectedElement.remove())),
                     createElement('hr')
                 ]),
-                createButton('Add area', afterHidingDialog(() => addDiv(selectedElement, contextMenuAt.x, contextMenuAt.y))),
+                createButton('Add area', afterHidingDialog(() => addDiv(selectedElement || document.body, contextMenuAt.x, contextMenuAt.y))),
                 createButton('Save page', afterHidingDialog(savePage)),
             ],
         )
@@ -129,7 +154,7 @@ function PageEditor() {
     }
 
     function createButton(innerText, onclick) {
-        return createElement('div', {}, [createElement('button', { innerText, onclick })])
+        return createElement('button', { innerText, onclick })
     }
 
     function relateCoordinatesToElement(coordinates, element) {
@@ -153,26 +178,55 @@ function PageEditor() {
             return
         }
 
-        const div = createElement('div', { className: 'area' })
+        const div = createElement('div', { className: classInput.value }, ['\n  '])
         div.style.left = x + 'px'
         div.style.top = y + 'px'
         div.style.minWidth = gridSize.x + 'px'
         div.style.minHeight = gridSize.y + 'px'
 
-        parent.appendChild(div)
+        div.onmouseover = (event) => {
+            if (event.target === div && div !== selectedElement) {
+                event.stopPropagation()
+                selectElement(div)
+            }
+        }
+
+        parent.append(div, '\n')
         selectElement(div)
     }
 
+    function isInsideBody(it) {
+        return it !== document.body && document.body.contains(it)
+    }
+
     function selectElement(it) {
-        if (dragger) {
-            dragger.end()
-        }
-        if (document.body.contains(it)) {
-            selectedElement = it
-            dragger = Draggable(it)
-        } else {
-            selectedElement = document.body
-            dragger = undefined
+        if (it != selectedElement) {
+            if (dragger) {
+                dragger.end()
+            }
+            if (isInsideBody(selectedElement)) {
+                deepMergeToObject(originalOfSelected, selectedElement)
+            }
+            if (isInsideBody(it)) {
+                selectedElement = it
+                dragger = Draggable(it)
+                classInput.value = it.className
+                originalOfSelected = {
+                    style: { boxShadow: it.style.boxShadow },
+                    parentElement: {
+                        style: { boxShadow: it.parentElement.style.boxShadow }
+                    },
+                }
+                deepMergeToObject({
+                    style: { boxShadow: boxShadows.selected },
+                    parentElement: {
+                        style: { boxShadow: boxShadows.parent },
+                    }
+                }, selectedElement)
+            } else {
+                selectedElement = null
+                dragger = undefined
+            }
         }
     }
 
@@ -212,9 +266,9 @@ function PageEditor() {
         function mouseDown(event) {
             mouseFrom = { x: event.clientX, y: event.clientY }
             const relativeMouse = relateCoordinatesToElement(mouseFrom, it.offsetParent)
-            const distanceFromRightEdge = it.offsetLeft + it.offsetWidth - relativeMouse.x
-            const distanceFromBottomEdge = it.offsetTop + it.offsetHeight - relativeMouse.y
-            const closeToBottomRightCorner = distanceFromRightEdge < 6 && distanceFromBottomEdge < 6
+            const distanceFromRightEdge = (it.offsetLeft + it.offsetWidth - relativeMouse.x) / gridSize.x
+            const distanceFromBottomEdge = (it.offsetTop + it.offsetHeight - relativeMouse.y) / gridSize.y
+            const closeToBottomRightCorner = (distanceFromRightEdge + distanceFromBottomEdge) < 1
 
             if (closeToBottomRightCorner) {
                 boxFrom.x = it.offsetWidth
@@ -266,3 +320,5 @@ function PageEditor() {
 
     return { editPage, savePage }
 }
+
+PageEditor().editPage()
