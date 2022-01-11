@@ -1,12 +1,12 @@
 function PageEditor() {
     const styleClasses = {
-        'div': 'position: absolute; box-shadow: 0 0 2px rgba(96,96,96,0.5)',
+        'div': 'position: absolute; box-shadow: 0 0 4px rgba(96,96,96,0.5)',
         '#page-editor-dialog': 'background-color: lightgray',
         '#page-editor-dialog *': 'position: initial',
     }
     const boxShadows = {
-        'selected': '0 0 2px rgba(255,0,0,0.5)',
-        'parent': '0 0 2px rgba(255,0,0,0.3)',
+        'selected': '0 0 4px rgba(255,0,0,0.7)',
+        'parent': '0 0 4px rgba(255,0,0,0.5)',
     }
 
     var classInput = createElement('input', { onchange: onDialogClassNameChange })
