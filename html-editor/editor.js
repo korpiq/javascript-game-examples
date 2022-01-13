@@ -1,8 +1,8 @@
 function PageEditor() {
     const styleClasses = {
-        'div': 'position: absolute; box-shadow: 0 0 4px rgba(96,96,96,0.5)',
-        '#page-editor-dialog': 'background-color: lightgray',
-        '#page-editor-dialog *': 'position: initial',
+        'div': 'position: absolute; box-shadow: 0 0 4px rgba(96,96,96,0.5); opacity: 0.8',
+        '#page-editor-dialog': 'background-color: lightgray; box-shadow: none; opacity: 1',
+        '#page-editor-dialog *': 'position: initial; box-shadow: none; opacity: 1',
     }
     const boxShadows = {
         'selected': '0 0 4px rgba(255,0,0,0.7)',
@@ -185,7 +185,7 @@ function PageEditor() {
         div.style.minHeight = gridSize.y + 'px'
 
         div.onmouseover = (event) => {
-            if (event.target === div && div !== selectedElement) {
+            if (event.target === div && div !== selectedElement && !dragger?.isDragging()) {
                 event.stopPropagation()
                 selectElement(div)
             }
@@ -240,6 +240,7 @@ function PageEditor() {
         }
         var mouseFrom = { x: 0, y: 0 }
         var boxFrom = { x: 0, y: 0 }
+        var dragging = false
 
         function move(event) {
             const dx = event.clientX - mouseFrom.x
@@ -264,6 +265,7 @@ function PageEditor() {
         }
 
         function mouseDown(event) {
+            dragging = true
             mouseFrom = { x: event.clientX, y: event.clientY }
             const relativeMouse = relateCoordinatesToElement(mouseFrom, it.offsetParent)
             const distanceFromRightEdge = (it.offsetLeft + it.offsetWidth - relativeMouse.x) / gridSize.x
@@ -287,6 +289,7 @@ function PageEditor() {
         }
 
         function mouseUp(event) {
+            dragging = false
             const action = window.onmousemove
             deepMergeToObject(originalWindow, window)
 
@@ -313,9 +316,11 @@ function PageEditor() {
             deepMergeToObject(originalWindow, window)
         }
 
+        function isDragging() { return dragging }
+
         it.onmousedown = mouseDown
 
-        return { end }
+        return { end, isDragging }
     }
 
     return { editPage, savePage }
