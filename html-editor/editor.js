@@ -1,13 +1,15 @@
 function PageEditor() {
-    const styleClasses = {
-        'div': 'position: absolute; box-shadow: 0 0 4px rgba(96,96,96,0.5); opacity: 0.8',
-        '#page-editor-dialog': 'background-color: lightgray; box-shadow: none; opacity: 1',
-        '#page-editor-dialog *': 'position: initial; box-shadow: none; opacity: 1',
-    }
     const boxShadows = {
         'selected': '0 0 4px rgba(255,0,0,0.7)',
         'parent': '0 0 4px rgba(255,0,0,0.5)',
     }
+    var hilightStyleElement = createEditorStyles({
+        'div': 'position: absolute; box-shadow: 0 0 4px rgba(0,0,0,0.5), inset 0 0 4px rgba(255,255,128,1); opacity: 0.5',
+    })
+    var editorStyleElement = createEditorStyles({
+        '#page-editor-dialog': 'position: absolute; background-color: lightgray; box-shadow: none; opacity: 1',
+        '#page-editor-dialog *': 'position: initial; box-shadow: none; opacity: 1',
+    })
 
     var classInput = createElement('input', { onchange: onDialogClassNameChange })
     var pageEditDialog = createPageEditDialog()
@@ -30,14 +32,25 @@ function PageEditor() {
 
     function editPage() {
         window.oncontextmenu = showPageEditDialog
-        document.head.append(createEditorStyles())
         console.log('Page editor activated')
     }
 
-    function createEditorStyles() {
+    function createEditorStyles(styleClasses) {
         const style = document.createElement('style')
         style.innerHTML = Object.keys(styleClasses).map((k) => `${k} { ${styleClasses[k]} }`).join('\n')
         return style
+    }
+
+    function activateStyle(styleElement) {
+        if (!document.head.contains(styleElement)) {
+            document.head.append(styleElement)
+        }
+    }
+
+    function deactivateStyle(styleElement) {
+        if (document.head.contains(styleElement)) {
+            styleElement.remove()
+        }
     }
 
     function savePage(filename) {
@@ -60,6 +73,8 @@ function PageEditor() {
     }
 
     function showPageEditDialog(event) {
+        activateStyle(editorStyleElement)
+        activateStyle(hilightStyleElement)
         pageEditDialog.style.top = event.clientY + 'px'
         pageEditDialog.style.left = event.clientX + 'px'
         document.body.appendChild(pageEditDialog)
@@ -80,18 +95,17 @@ function PageEditor() {
     function hidePageEditDialog() {
         if (document.body.contains(pageEditDialog)) {
             document.body.removeChild(pageEditDialog)
+            deactivateStyle(editorStyleElement)
+            deactivateStyle(hilightStyleElement)
             window.onmousedown = beforeContextMenu.onmousedown
             window.onkeydown = beforeContextMenu.onkeydown
+            isMouseOnEditDialog = true
         }
     }
 
     function hidePageEditDialogByEvent(event) {
         if (event.key === 'Escape' || !isMouseOnEditDialog) {
-            if (document.body.contains(pageEditDialog)) {
-                document.body.removeChild(pageEditDialog)
-                window.onmousedown = beforeContextMenu.onmousedown
-                window.onkeydown = beforeContextMenu.onkeydown
-            }
+            hidePageEditDialog()
             if (event.key === 'Escape') {
                 return false // key was pressed only for closing dialog
             }
@@ -116,6 +130,7 @@ function PageEditor() {
             'div',
             {
                 id: 'page-editor-dialog',
+                // style: 'position: absolute; background-color: lightgray; box-shadow: none; opacity: 1',
                 onmouseover: () => isMouseOnEditDialog = true,
                 onmouseout: () => isMouseOnEditDialog = false,
             },
@@ -178,7 +193,7 @@ function PageEditor() {
             return
         }
 
-        const div = createElement('div', { className: classInput.value }, ['\n  '])
+        const div = createElement('div', { className: classInput.value, style: 'position: absolute' }, ['\n  '])
         div.style.left = x + 'px'
         div.style.top = y + 'px'
         div.style.minWidth = gridSize.x + 'px'
@@ -265,6 +280,7 @@ function PageEditor() {
         }
 
         function mouseDown(event) {
+            activateStyle(hilightStyleElement)
             dragging = true
             mouseFrom = { x: event.clientX, y: event.clientY }
             const relativeMouse = relateCoordinatesToElement(mouseFrom, it.offsetParent)
@@ -289,6 +305,7 @@ function PageEditor() {
         }
 
         function mouseUp(event) {
+            deactivateStyle(hilightStyleElement)
             dragging = false
             const action = window.onmousemove
             deepMergeToObject(originalWindow, window)
