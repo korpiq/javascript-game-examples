@@ -1,10 +1,14 @@
 function PageEditor() {
+    var gridSize = {
+        x: 16,
+        y: 16,
+    }
     const boxShadows = {
-        'selected': '0 0 4px rgba(255,0,0,0.7)',
-        'parent': '0 0 4px rgba(255,0,0,0.5)',
+        'selected': '0 0 8px rgba(255,0,0,1), 0 0 4px rgba(255,255,255,1)',
+        'parent': '0 0 8px rgba(255,0,0,0.7), 0 0 4px rgba(255,255,255,0.7)',
     }
     var hilightStyleElement = createEditorStyles({
-        'div': 'position: absolute; box-shadow: 0 0 4px rgba(0,0,0,0.5), inset 0 0 4px rgba(255,255,128,1); opacity: 0.5',
+        'div': 'position: absolute; box-shadow: 0 0 8px rgba(0,0,0,1), inset 0 0 4px rgba(255,255,128,1); opacity: 0.5',
     })
     var editorStyleElement = createEditorStyles({
         '#page-editor-dialog': 'position: absolute; background-color: lightgray; box-shadow: none; opacity: 1',
@@ -16,10 +20,6 @@ function PageEditor() {
     var selectedElement = null
     var originalOfSelected = {}
     var dragger = undefined
-    var gridSize = {
-        x: 16,
-        y: 16,
-    }
     var isMouseOnEditDialog = false
     var contextMenuAt = {
         x: 0,
@@ -32,6 +32,7 @@ function PageEditor() {
 
     function editPage() {
         window.oncontextmenu = showPageEditDialog
+        window.onmousedown = selectElementOnEvent
         console.log('Page editor activated')
     }
 
@@ -199,19 +200,20 @@ function PageEditor() {
         div.style.minWidth = gridSize.x + 'px'
         div.style.minHeight = gridSize.y + 'px'
 
-        div.onmouseover = (event) => {
-            if (event.target === div && div !== selectedElement && !dragger?.isDragging()) {
-                event.stopPropagation()
-                selectElement(div)
-            }
-        }
-
         parent.append(div, '\n')
         selectElement(div)
     }
 
     function isInsideBody(it) {
         return it !== document.body && document.body.contains(it)
+    }
+
+    function selectElementOnEvent(event) {
+        it = event.target
+        if (it && it.tagName && !dragger?.isDragging()) {
+            event.stopPropagation()
+            selectElement(it)
+        }
     }
 
     function selectElement(it) {
@@ -242,6 +244,7 @@ function PageEditor() {
                 selectedElement = null
                 dragger = undefined
             }
+            console.log('selected', selectedElement)
         }
     }
 
