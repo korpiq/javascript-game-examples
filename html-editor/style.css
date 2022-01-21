@@ -1,0 +1,15 @@
+.black {
+    background-color: black;
+}
+
+.blue {
+    background-color: blue;
+}
+
+.grass {
+    background-image: url(https://opengameart.org/sites/default/files/styles/medium/public/Grass%20Texture%204.jpg);
+}
+
+.wall {
+    background-image: url(https://opengameart.org/sites/default/files/styles/medium/public/sample4.png);
+}
